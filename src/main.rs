@@ -11,20 +11,26 @@ use cortex_m::{
     asm,
     iprintln,
     Peripherals,
+    peripheral::{NVIC},
 };
-use cortex_m_rt::entry;
+use cortex_m_rt::{entry,exception};
 use stm32wb_hal as hal;
 use hal::{
     hal::digital::v2::{PinState, OutputPin},
+    interrupt,
     flash::{Parts},
+    gpio::{Edge, ExtiPin},
     prelude::*,
     rcc::{ApbDivider, Config, HDivider, HseDivider, PllConfig, PllSrc, Rcc, SysClkSrc, },
+    stm32,
 };
+
+
 
 #[entry]
 fn main() -> ! {
     let mut cp = cortex_m::Peripherals::take().unwrap();
-    let dp = hal::stm32::Peripherals::take().unwrap();
+    let mut dp = hal::stm32::Peripherals::take().unwrap();
     let mut stim = &mut cp.ITM.stim;
 
     // Use default clock frequency of 4 MHz running from MSI
@@ -42,10 +48,29 @@ fn main() -> ! {
     let mut ledg = gpiob.pb0.into_push_pull_output(&mut gpiob.moder, &mut gpiob.otyper);
     let mut ledr = gpiob.pb1.into_push_pull_output(&mut gpiob.moder, &mut gpiob.otyper);
     let mut ledb = gpiob.pb5.into_push_pull_output(&mut gpiob.moder, &mut gpiob.otyper);
+    // exit 15_10
     let mut sw1 = gpioc.pc13.into_pull_up_input(&mut gpioc.moder, &mut gpioc.pupdr);
+    // exti 0
     let mut sw2 = gpiod.pd0.into_pull_up_input(&mut gpiod.moder, &mut gpiod.pupdr);
+    // exti 1
     let mut sw3 = gpiod.pd1.into_pull_up_input(&mut gpiod.moder, &mut gpiod.pupdr);
 
+    sw1.make_interrupt_source(&mut dp.SYSCFG);
+    sw1.enable_interrupt(&mut dp.EXTI);
+    sw1.trigger_on_edge(&mut dp.EXTI, Edge::Falling);
+    sw2.make_interrupt_source(&mut dp.SYSCFG);
+    sw2.enable_interrupt(&mut dp.EXTI);
+    sw2.trigger_on_edge(&mut dp.EXTI, Edge::Falling);
+    sw3.make_interrupt_source(&mut dp.SYSCFG);
+    sw3.enable_interrupt(&mut dp.EXTI);
+    sw3.trigger_on_edge(&mut dp.EXTI, Edge::Falling);
+
+    // Enable interrupts
+    unsafe {
+        NVIC::unmask(stm32::Interrupt::EXTI0);
+        NVIC::unmask(stm32::Interrupt::EXTI1);
+        NVIC::unmask(stm32::Interrupt::EXTI10_15);
+    }
 
     iprintln!(& mut stim[0], "booty boot");
     let mut i = 0;
@@ -79,4 +104,16 @@ fn setup_clocks(rcc: Rcc, mut flash: Parts) -> Rcc {
         });
     // rcc.apply_clock_config(clock_config, &mut dp.FLASH.constrain().acr)
     rcc.apply_clock_config(clock_config_hse32_pll64, &mut flash.acr)
+}
+
+#[exception]
+#[allow(non_snake_case)]
+fn DefaultHandler(irqn: i16) {
+    panic!("Unhandled exception (IRQn = {})", irqn);
+}
+
+#[interrupt]
+fn EXTI10_15() {
+    // just fucking what?! why is it so fucking hard to get access to the stimulus port!!
+    // iprintln!("button 2 pressed");
 }
