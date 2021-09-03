@@ -21,10 +21,9 @@ use hal::{
     flash::{Parts},
     gpio::{Edge, ExtiPin},
     prelude::*,
-    rcc::{ApbDivider, Config, HDivider, HseDivider, PllConfig, PllSrc, Rcc, SysClkSrc, },
+    rcc::{ApbDivider, Config, HDivider, HseDivider, PllConfig, PllSrc, Rcc, RtcClkSrc, RfWakeupClock, SysClkSrc, },
     stm32,
 };
-
 
 
 #[entry]
@@ -38,6 +37,7 @@ fn main() -> ! {
     let mut flash = dp.FLASH.constrain();
 
     let mut rcc = setup_clocks(rcc, flash);
+    iprintln!(& mut stim[0], "booty boot clock is {:?}", rcc.clocks.sysclk());
     //let clocks = hal::rcc::Clocks::default();
     let mut delay_naiive = hal::delay::DelayCM::new(rcc.clocks);
 
@@ -67,8 +67,8 @@ fn main() -> ! {
 
     // Enable interrupts
     unsafe {
-        NVIC::unmask(stm32::Interrupt::EXTI0);
-        NVIC::unmask(stm32::Interrupt::EXTI1);
+        // NVIC::unmask(stm32::Interrupt::EXTI0);
+        // NVIC::unmask(stm32::Interrupt::EXTI1);
         NVIC::unmask(stm32::Interrupt::EXTI10_15);
     }
 
@@ -102,8 +102,17 @@ fn setup_clocks(rcc: Rcc, mut flash: Parts) -> Rcc {
             q: Some(4),
             p: Some(3),
         });
-    // rcc.apply_clock_config(clock_config, &mut dp.FLASH.constrain().acr)
+
+    let clock_config_hse32_nopll = Config::new(SysClkSrc::HseSys(HseDivider::NotDivided))
+        .cpu1_hdiv(HDivider::NotDivided)
+        .cpu2_hdiv(HDivider::NotDivided)
+        .apb1_div(ApbDivider::NotDivided)
+        .apb2_div(ApbDivider::NotDivided)
+        .rtc_src(RtcClkSrc::Lse)
+        .rf_wkp_sel(RfWakeupClock::Lse);
+        ;
     rcc.apply_clock_config(clock_config_hse32_pll64, &mut flash.acr)
+    //rcc.apply_clock_config(clock_config_hse32_nopll, &mut flash.acr)
 }
 
 #[exception]
