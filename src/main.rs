@@ -109,10 +109,10 @@ fn setup_clocks(rcc: Rcc, mut flash: Parts) -> Rcc {
         .apb1_div(ApbDivider::NotDivided)
         .apb2_div(ApbDivider::NotDivided)
         .rtc_src(RtcClkSrc::Lse)
-        .rf_wkp_sel(RfWakeupClock::Lse);
+        .rf_wkp_sel(RfWakeupClock::Lse)
         ;
-    rcc.apply_clock_config(clock_config_hse32_pll64, &mut flash.acr)
-    //rcc.apply_clock_config(clock_config_hse32_nopll, &mut flash.acr)
+    //rcc.apply_clock_config(clock_config_hse32_pll64, &mut flash.acr)
+    rcc.apply_clock_config(clock_config_hse32_nopll, &mut flash.acr)
 }
 
 #[exception]
