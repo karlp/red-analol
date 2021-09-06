@@ -11,7 +11,10 @@ use cortex_m::{
     asm,
     iprintln,
     Peripherals,
-    peripheral::{NVIC},
+    peripheral::{
+        NVIC,
+        itm::Stim,
+    },
 };
 use cortex_m_rt::{entry,exception};
 use stm32wb_hal as hal;
@@ -24,7 +27,7 @@ use hal::{
     rcc::{ApbDivider, Config, HDivider, HseDivider, PllConfig, PllSrc, Rcc, RtcClkSrc, RfWakeupClock, SysClkSrc, },
     stm32,
 };
-use cortex_m::peripheral::itm::Stim;
+use cortex_m::interrupt::free;
 
 trait StimExt {
     /// Write byte, blocking
@@ -69,8 +72,10 @@ fn main() -> ! {
     let mut ledg = gpiob.pb0.into_push_pull_output(&mut gpiob.moder, &mut gpiob.otyper);
     let mut ledr = gpiob.pb1.into_push_pull_output(&mut gpiob.moder, &mut gpiob.otyper);
     let mut ledb = gpiob.pb5.into_push_pull_output(&mut gpiob.moder, &mut gpiob.otyper);
-    // exit 15_10
-    let mut sw1 = gpioc.pc13.into_pull_up_input(&mut gpioc.moder, &mut gpioc.pupdr);
+    // exit 15_10 pc 13 if sb48 is on,
+    //let mut sw1 = gpioc.pc13.into_pull_up_input(&mut gpioc.moder, &mut gpioc.pupdr);
+    // exti 4, pc4 if sb48 is off and sb47 is on (default)
+    let mut sw1 = gpioc.pc4.into_pull_up_input(&mut gpioc.moder, &mut gpioc.pupdr);
     // exti 0
     let mut sw2 = gpiod.pd0.into_pull_up_input(&mut gpiod.moder, &mut gpiod.pupdr);
     // exti 1
@@ -88,9 +93,9 @@ fn main() -> ! {
 
     // Enable interrupts
     unsafe {
-        // NVIC::unmask(stm32::Interrupt::EXTI0);
-        // NVIC::unmask(stm32::Interrupt::EXTI1);
-        NVIC::unmask(stm32::Interrupt::EXTI10_15);
+        NVIC::unmask(stm32::Interrupt::EXTI0);
+        NVIC::unmask(stm32::Interrupt::EXTI1);
+        NVIC::unmask(stm32::Interrupt::EXTI4);
     }
 
     let mut i = 0;
@@ -142,8 +147,17 @@ fn DefaultHandler(irqn: i16) {
     panic!("Unhandled exception (IRQn = {})", irqn);
 }
 
+// This... _works_ (with or without the free(|cs|) wrappers, but... man, it's unpleasant.
+// it's _differently_ unpleasant to some of the "safe" ways.
 #[interrupt]
-fn EXTI10_15() {
+fn EXTI4() {
     // just fucking what?! why is it so fucking hard to get access to the stimulus port!!
-    // iprintln!("button 2 pressed");
+    // free(|cs| {
+        let mut stim = unsafe {&mut cortex_m::Peripherals::steal().ITM.stim};
+        iprintln!(&mut stim[0], "button pressed");
+        unsafe {
+            let mut pr = &(*hal::pac::EXTI::ptr()).pr1;
+            pr.write(|w| unsafe { w.bits(1<<4) });
+        }
+    // });
 }
