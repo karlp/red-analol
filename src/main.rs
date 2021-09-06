@@ -24,20 +24,41 @@ use hal::{
     rcc::{ApbDivider, Config, HDivider, HseDivider, PllConfig, PllSrc, Rcc, RtcClkSrc, RfWakeupClock, SysClkSrc, },
     stm32,
 };
+use cortex_m::peripheral::itm::Stim;
+
+trait StimExt {
+    /// Write byte, blocking
+    fn write_u8b(&mut self, value: u8);
+    /// Write half word, 16bit, blocking
+    fn write_u16b(&mut self, value: u16);
+}
+
+impl StimExt for Stim {
+    #[inline]
+    fn write_u8b(&mut self, value: u8) {
+        while !self.is_fifo_ready() {}
+        self.write_u8(value);
+    }
+
+    fn write_u16b(&mut self, value: u16) {
+        while !self.is_fifo_ready() {}
+        self.write_u16(value);
+    }
+}
 
 
 #[entry]
 fn main() -> ! {
     let mut cp = cortex_m::Peripherals::take().unwrap();
     let mut dp = hal::stm32::Peripherals::take().unwrap();
-    let mut stim = &mut cp.ITM.stim;
 
-    // Use default clock frequency of 4 MHz running from MSI
     let mut rcc = dp.RCC.constrain();
     let mut flash = dp.FLASH.constrain();
-
     let mut rcc = setup_clocks(rcc, flash);
-    iprintln!(& mut stim[0], "booty boot clock is {:?}", rcc.clocks.sysclk());
+
+    let stim = &mut cp.ITM.stim;
+    iprintln!(&mut stim[0], "booty boot clock is {:?}", rcc.clocks.sysclk());
+
     //let clocks = hal::rcc::Clocks::default();
     let mut delay_naiive = hal::delay::DelayCM::new(rcc.clocks);
 
@@ -72,12 +93,12 @@ fn main() -> ! {
         NVIC::unmask(stm32::Interrupt::EXTI10_15);
     }
 
-    iprintln!(& mut stim[0], "booty boot");
     let mut i = 0;
     loop {
         iprintln!(&mut stim[0], "loopy da loop: {}", i);
+        stim[1].write_u16b(i);
+        stim[2].write_u16b(i*2);
         i += 1;
-        stim[1].write_u16(i);
         // delay....
         delay_naiive.delay_ms(300 as u16);
 
