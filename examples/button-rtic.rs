@@ -43,9 +43,9 @@ mod app {
         flash::{Parts},
         gpio::{
             Edge, ExtiPin, Input, Output, PullUp, PushPull,
-            gpiob::{PB0, PB1, PB5},
-            gpioc::{PC4},
-            gpiod::{PD0, PD1},
+            gpiob::{PBx, PB0, PB1, PB5},
+            gpioc::{PCx, PC4},
+            gpiod::{PDx, PD0, PD1},
         },
         hal::digital::v2::{PinState, OutputPin},
         prelude::*,
@@ -58,9 +58,7 @@ mod app {
     pub type Sw1 = PC4<Input<PullUp>>;
     pub type Sw2 = PD0<Input<PullUp>>;
     pub type Sw3 = PD1<Input<PullUp>>;
-    pub type LedR = PB1<Output<PushPull>>;
-    pub type LedG = PB0<Output<PushPull>>;
-    pub type LedB = PB5<Output<PushPull>>;
+    pub type LedPB = PBx<Output<PushPull>>;
 
 
     #[shared]
@@ -73,11 +71,11 @@ mod app {
         sw3: Sw3,
         // stim: [Stim; 256],
         #[lock_free]
-        ledr: LedR,
+        ledr: LedPB,
         #[lock_free]
-        ledg: LedG,
+        ledg: LedPB,
         #[lock_free]
-        ledb: LedB,
+        ledb: LedPB,
     }
 
     #[local]
@@ -135,7 +133,7 @@ mod app {
         (Shared{
             sw1, sw2, sw3,
             // stim,
-            ledr, ledg, ledb,
+            ledr: ledr.downgrade(), ledg: ledg.downgrade(), ledb: ledb.downgrade(),
         },
          Local{ delay: delay_naiive},
          init::Monotonics())
@@ -155,7 +153,7 @@ mod app {
             ctx.local.delay.delay_ms(300 as u16);
 
             // both work, one way gives you completion in intellij
-            let mut ledr: &mut LedR = ctx.shared.ledr;
+            let mut ledr: &mut LedPB = ctx.shared.ledr;
             ledr.set_state(PinState::from((i & 1) > 0));
             ctx.shared.ledg.set_state(PinState::from((i & 2) > 0));
             ctx.shared.ledb.set_state(PinState::from((i & 4) > 0));
