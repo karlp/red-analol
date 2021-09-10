@@ -153,7 +153,7 @@ mod app {
             ctx.local.delay.delay_ms(300 as u16);
 
             // both work, one way gives you completion in intellij
-            let mut ledr: &mut LedPB = ctx.shared.ledr;
+            let ledr: &mut LedPB = ctx.shared.ledr;
             ledr.set_state(PinState::from((i & 1) > 0));
             ctx.shared.ledg.set_state(PinState::from((i & 2) > 0));
             ctx.shared.ledb.set_state(PinState::from((i & 4) > 0));
@@ -162,20 +162,7 @@ mod app {
 
 
     fn setup_clocks(rcc: Rcc, mut flash: Parts) -> Rcc {
-
-        let clock_config_hse32_pll64 = Config::new(SysClkSrc::Pll(PllSrc::Hse(HseDivider::NotDivided)))
-            .cpu1_hdiv(HDivider::NotDivided)
-            .cpu2_hdiv(HDivider::Div2)
-            .apb1_div(ApbDivider::NotDivided)
-            .apb2_div(ApbDivider::NotDivided)
-            .pll_cfg(PllConfig {
-                m: 2,
-                n: 12,
-                r: 3,
-                q: Some(4),
-                p: Some(3),
-            });
-
+        // 32MHz is enough for us for now, and uses less power.
         let clock_config_hse32_nopll = Config::new(SysClkSrc::HseSys(HseDivider::NotDivided))
             .cpu1_hdiv(HDivider::NotDivided)
             .cpu2_hdiv(HDivider::NotDivided)
@@ -184,7 +171,6 @@ mod app {
             .rtc_src(RtcClkSrc::Lse)
             .rf_wkp_sel(RfWakeupClock::Lse)
             ;
-        //rcc.apply_clock_config(clock_config_hse32_pll64, &mut flash.acr)
         rcc.apply_clock_config(clock_config_hse32_nopll, &mut flash.acr)
     }
 
