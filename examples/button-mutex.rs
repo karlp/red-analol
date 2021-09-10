@@ -161,7 +161,7 @@ fn setup_clocks(rcc: Rcc, mut flash: Parts) -> Rcc {
 
 #[exception]
 #[allow(non_snake_case)]
-fn DefaultHandler(irqn: i16) {
+unsafe fn DefaultHandler(irqn: i16) {
     panic!("Unhandled exception (IRQn = {})", irqn);
 }
 

@@ -218,6 +218,6 @@ mod app {
 
 #[exception]
 #[allow(non_snake_case)]
-fn DefaultHandler(irqn: i16) {
+unsafe fn DefaultHandler(irqn: i16) {
     panic!("Unhandled exception (IRQn = {})", irqn);
 }
