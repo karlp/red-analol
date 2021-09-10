@@ -27,4 +27,4 @@ opt-level = "s"
 # Allows us to hack on the HAL layer.
 [patch.crates-io]
 stm32wb-hal = { path = "../rust-eupn-stm32wb-hal" }
-
+stm32wb = { path = "../stm32-rs/stm32wb" }
